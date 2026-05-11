@@ -5,6 +5,7 @@ import Peer from "simple-peer";
 let state = {
   user: JSON.parse(localStorage.getItem('aura_user') || 'null'),
   token: localStorage.getItem('aura_token'),
+  authMode: 'login', // 'login' | 'register'
   activeView: 'chat', 
   selectedTarget: null, // { type: 'p2p'|'group'|'subgroup', id: string, name: string }
   chats: { p2p: [], groups: [] },
@@ -62,16 +63,19 @@ function logout() {
 function render() {
   const app = document.getElementById('app');
   if (!state.token) {
-    app.innerHTML = renderAuth();
+    app.innerHTML = state.authMode === 'login' ? renderLogin() : renderRegister();
     attachAuthEvents();
   } else {
     app.innerHTML = renderMain();
     attachMainEvents();
-    lucide.createIcons();
+  }
+  
+  if (window.lucide) {
+      window.lucide.createIcons();
   }
 }
 
-function renderAuth() {
+function renderAuthBase(content) {
   return `
     <div class="min-h-screen flex items-center justify-center p-4">
       <div class="glass-panel p-10 rounded-3xl w-full max-w-md border-white/10 shadow-2xl relative overflow-hidden" id="auth-container">
@@ -84,28 +88,34 @@ function renderAuth() {
           <p class="text-accent-emerald text-[10px] uppercase tracking-[0.4em] font-bold">Secure Tactical Protocol</p>
         </div>
         <div id="auth-forms">
-            <form id="login-form" class="space-y-4">
-              <div class="relative">
-                <i data-lucide="user" size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"></i>
-                <input type="text" name="login" placeholder="Access ID" class="w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-2xl text-white focus:border-accent-emerald outline-none transition-all" required />
-              </div>
-              <div class="relative">
-                <i data-lucide="lock" size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"></i>
-                <input type="password" name="password" placeholder="Cipher Pattern" class="w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-2xl text-white focus:border-accent-emerald outline-none transition-all" required />
-              </div>
-              <button type="submit" class="w-full bg-accent-emerald text-black font-black p-4 rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,136,0.3)]">Establish Link</button>
-            </form>
-            <div class="mt-8 text-center border-t border-white/5 pt-6">
-                <button id="show-register" class="text-text-secondary text-sm hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto"><i data-lucide="user-plus" size="16"></i> Request Clearance</button>
-            </div>
+            ${content}
         </div>
       </div>
     </div>
   `;
 }
 
+function renderLogin() {
+    return renderAuthBase(`
+        <form id="login-form" class="space-y-4">
+          <div class="relative">
+            <i data-lucide="user" size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+            <input type="text" name="login" placeholder="Access ID" class="w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-2xl text-white focus:border-accent-emerald outline-none transition-all" required />
+          </div>
+          <div class="relative">
+            <i data-lucide="lock" size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary"></i>
+            <input type="password" name="password" placeholder="Cipher Pattern" class="w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-2xl text-white focus:border-accent-emerald outline-none transition-all" required />
+          </div>
+          <button type="submit" class="w-full bg-accent-emerald text-black font-black p-4 rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(0,255,136,0.3)]">Establish Link</button>
+        </form>
+        <div class="mt-8 text-center border-t border-white/5 pt-6">
+            <button id="show-register" type="button" class="text-text-secondary text-sm hover:text-white transition-colors flex items-center justify-center gap-2 mx-auto"><i data-lucide="user-plus" size="16"></i> Request Clearance</button>
+        </div>
+    `);
+}
+
 function renderRegister() {
-    return `
+    return renderAuthBase(`
         <div class="text-center mb-8">
           <h2 class="text-2xl font-bold text-white tracking-tight uppercase">Registration</h2>
           <p class="text-accent-emerald text-[10px] uppercase tracking-widest mt-1">Initialize New Neural Profile</p>
@@ -113,8 +123,6 @@ function renderRegister() {
         <form id="register-form" class="space-y-3">
           <input type="text" name="login" placeholder="Codename" class="w-full bg-black/40 border border-white/10 p-3.5 rounded-2xl text-white focus:border-accent-emerald outline-none text-sm" required />
           <input type="password" name="password" placeholder="Pass-key" class="w-full bg-black/40 border border-white/10 p-3.5 rounded-2xl text-white focus:border-accent-emerald outline-none text-sm" required />
-          <input type="text" name="full_name" placeholder="Official Identity" class="w-full bg-black/40 border border-white/10 p-3.5 rounded-2xl text-white focus:border-accent-emerald outline-none text-sm" required />
-          
           <div class="flex gap-2">
             <select name="role" id="role-select" class="flex-1 bg-black/40 border border-white/10 p-3.5 rounded-2xl text-white focus:border-accent-emerald outline-none text-sm appearance-none">
                 <option value="PLAYER">Operative</option>
@@ -122,47 +130,42 @@ function renderRegister() {
             </select>
             <input type="text" name="group_dept" id="role-detail-input" placeholder="Sector" class="flex-[2] bg-black/40 border border-white/10 p-3.5 rounded-2xl text-white focus:border-accent-emerald outline-none text-sm" required />
           </div>
-
           <button type="submit" class="w-full bg-accent-emerald text-black font-black p-4 rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all uppercase tracking-widest mt-4">Generate Token</button>
         </form>
         <div class="mt-6 text-center">
-            <button id="show-login" class="text-text-secondary text-xs hover:text-white transition-colors underline decoration-accent-emerald/30">Already Synchronized? Return to Login</button>
+            <button id="show-login" type="button" class="text-text-secondary text-xs hover:text-white transition-colors underline decoration-accent-emerald/30">Already Synchronized? Return to Login</button>
         </div>
-    `;
+    `);
 }
 
 function renderMain() {
   return `
     <div class="flex h-screen bg-[#060b0d]">
-      <!-- 1. Left Sidebar (Icons) -->
+      <!-- 1. Left Sidebar -->
       <nav class="w-[72px] glass-panel border-r border-white/5 flex flex-col items-center py-6 gap-4 z-30">
         <div class="w-10 h-10 bg-accent-emerald rounded-xl flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(0,255,136,0.3)]">
            <i data-lucide="shield" size="24" class="text-black"></i>
         </div>
         <div class="sidebar-icon ${state.activeView === 'chat' ? 'active' : ''}" data-view="chat">
            <i data-lucide="message-circle" size="24"></i>
-           <span>Chats</span>
+           <span class="text-[9px] mt-1 opacity-70">Chats</span>
         </div>
         <div class="sidebar-icon ${state.activeView === 'teams' ? 'active' : ''}" data-view="teams">
            <i data-lucide="users" size="24"></i>
-           <span>Teams</span>
+           <span class="text-[9px] mt-1 opacity-70">Teams</span>
         </div>
-        <div class="sidebar-icon ${state.activeView === 'intelligence' ? 'active' : ''}" data-view="intelligence">
-           <i data-lucide="radio" size="24"></i>
-           <span>Intel</span>
-        </div>
-        <div class="mt-auto sidebar-icon group" id="logout-btn">
+        <div class="mt-auto sidebar-icon group cursor-pointer" id="logout-btn">
            <i data-lucide="log-out" size="24" class="group-hover:text-red-400"></i>
-           <span class="group-hover:text-red-400">Exit</span>
+           <span class="text-[9px] mt-1 group-hover:text-red-400">Exit</span>
         </div>
       </nav>
 
-      <!-- 2. Sub-Sidebar (Lists) -->
+      <!-- 2. Sub-Sidebar -->
       <aside class="w-[340px] glass-panel border-r border-white/5 flex flex-col z-20">
         ${renderSubSidebar()}
       </aside>
 
-      <!-- 3. Main Content (Chat/Feature) -->
+      <!-- 3. Main Content -->
       <main class="flex-1 flex flex-col relative z-10">
         ${renderContent()}
       </main>
@@ -183,30 +186,23 @@ function renderSubSidebar() {
       <div class="p-6 border-b border-white/5 space-y-4">
         <div class="flex justify-between items-center">
             <h2 class="text-xl font-black text-white uppercase italic tracking-wider">Messages</h2>
-            <button class="w-8 h-8 rounded-lg bg-accent-emerald/10 text-accent-emerald flex items-center justify-center hover:bg-accent-emerald/20 transition-all" id="new-chat"><i data-lucide="plus" size="18"></i></button>
-        </div>
-        <div class="relative group">
-            <i data-lucide="search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-accent-emerald transition-colors"></i>
-            <input type="text" placeholder="Search operatives..." class="w-full bg-black/40 border border-white/5 p-2.5 pl-9 rounded-xl text-xs text-white focus:border-accent-emerald/30 outline-none transition-all" />
         </div>
       </div>
       <div class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
         ${state.chats.p2p.length ? state.chats.p2p.map(p => `
           <div class="p-3 rounded-2xl flex items-center gap-4 cursor-pointer transition-all hover:bg-white/5 ${state.selectedTarget?.type === 'p2p' && state.selectedTarget?.id === p.id ? 'bg-accent-emerald/10 border border-accent-emerald/20 shadow-[0_0_20px_rgba(0,255,136,0.05)]' : ''}" data-target-type="p2p" data-target-id="${p.id}">
             <div class="relative shrink-0">
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-panel-bg to-black border border-white/10 flex items-center justify-center font-black text-accent-emerald text-lg shadow-xl">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-panel-green to-black border border-white/10 flex items-center justify-center font-black text-accent-emerald text-lg shadow-xl">
                   ${(p.name || 'U')[0].toUpperCase()}
                 </div>
-                ${p.online ? '<div class="absolute -bottom-0.5 -right-0.5 status-dot status-online"></div>' : '<div class="absolute -bottom-0.5 -right-0.5 status-dot bg-gray-600"></div>'}
+                ${p.online ? '<div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-bg-deep shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>' : '<div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-gray-600 border-2 border-bg-deep"></div>'}
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-start mb-0.5">
                 <p class="font-bold text-white truncate text-sm target-name">${p.name}</p>
-                <span class="text-[9px] text-text-secondary font-medium">11:42</span>
               </div>
               <p class="text-[11px] text-text-secondary truncate leading-tight">${p.online ? '<span class="text-accent-emerald/80 font-bold uppercase text-[9px] tracking-tighter">Link Established</span>' : 'Awaiting sync...'}</p>
             </div>
-            ${Math.random() > 0.7 ? '<div class="w-5 h-5 rounded-full bg-accent-emerald text-black text-[10px] font-black flex items-center justify-center shadow-[0_0_10px_#00ff88]">2</div>' : ''}
           </div>
         `).join('') : emptyState('Neural network isolated')}
       </div>
@@ -225,7 +221,7 @@ function renderSubSidebar() {
                     <div class="w-8 h-8 rounded-lg bg-accent-emerald/20 flex items-center justify-center text-xs font-black text-accent-emerald shadow-inner">${(g.name || 'G')[0].toUpperCase()}</div>
                     <div class="flex-1 min-w-0 flex justify-between items-center text-gray-200">
                         <span class="font-bold text-xs uppercase tracking-wider truncate target-name">${g.name || 'Unnamed'}</span>
-                        ${state.user?.role === 'Commander' ? `<button class="p-1 hover:text-accent-emerald opacity-50 hover:opacity-100 transition-opacity" onclick="event.stopPropagation(); createSubgroup('${g.id}')"><i data-lucide="plus-circle" size="14"></i></button>` : ''}
+                        ${state.user?.role === 'Commander' ? `<button class="p-1 hover:text-accent-emerald opacity-50 hover:opacity-100 transition-opacity" onclick="event.stopPropagation(); window.createSubgroup('${g.id}')"><i data-lucide="plus-circle" size="14"></i></button>` : ''}
                     </div>
                 </div>
                 
@@ -251,8 +247,7 @@ function renderContent() {
   if (!state.selectedTarget) {
     return `
         <div class="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-[#060b0d] to-black">
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,136,0.05),transparent_70%)]"></div>
-            <div class="w-32 h-32 bg-white/5 rounded-[32px] flex items-center justify-center mb-8 rotate-12 glow-emerald border border-white/10">
+            <div class="w-32 h-32 bg-white/5 rounded-[32px] flex items-center justify-center mb-8 rotate-12 border border-white/10 shadow-[0_0_30px_rgba(0,255,136,0.1)]">
                 <i data-lucide="radio" size="64" class="text-accent-emerald -rotate-12"></i>
             </div>
             <h1 class="text-5xl font-black text-white uppercase italic tracking-[0.3em] mb-4">Nexus</h1>
@@ -268,7 +263,6 @@ function renderContent() {
                 <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-accent-emerald to-[#00ff88] flex items-center justify-center text-black font-black text-xl shadow-lg">
                     ${(state.selectedTarget.name || 'T')[0].toUpperCase()}
                 </div>
-                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-accent-emerald border-2 border-[#060b0d] shadow-[0_0_10px_#00ff88]"></div>
             </div>
             <div>
                 <h3 class="font-black text-white text-base tracking-tight italic">${state.selectedTarget.name || 'Target'}</h3>
@@ -282,15 +276,16 @@ function renderContent() {
             </div>
         </div>
         <div class="flex items-center gap-2">
+            ${state.user?.role === 'Commander' && state.selectedTarget.type !== 'p2p' ? `
+                <button class="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-accent-emerald transition-all" id="btn-add-member" title="Add User"><i data-lucide="user-plus" size="20"></i></button>
+            ` : ''}
             <button class="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-accent-emerald transition-all" id="btn-audio-call"><i data-lucide="phone" size="20"></i></button>
             <button class="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-accent-emerald transition-all" id="btn-video-call"><i data-lucide="video" size="20"></i></button>
-            <div class="w-px h-6 bg-white/10 mx-2"></div>
-            <button class="w-10 h-10 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-accent-emerald transition-all"><i data-lucide="search" size="20"></i></button>
         </div>
     </header>
 
     <div class="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar bg-[#0a0f16]" id="messages-container">
-        ${state.messages.map((m, i) => {
+        ${state.messages.map((m) => {
             const isMe = m.sender_id === state.user.id;
             return `
                 <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-slide-up">
@@ -315,9 +310,9 @@ function renderContent() {
                 <input type="file" id="file-input" class="hidden" />
             </label>
             <div class="flex-1 relative chat-input-area border-none bg-white/5 rounded-2xl">
-                <textarea id="msg-input" placeholder="Transmit message..." rows="1" class="w-full bg-transparent border-none px-5 py-4 rounded-xl text-white placeholder-white/20 outline-none resize-none min-h-[56px] max-h-[150px] text-sm"></textarea>
+                <input id="msg-input" autocomplete="off" placeholder="Transmit message..." class="w-full bg-transparent border-none px-5 py-4 rounded-xl text-white placeholder-white/20 outline-none text-sm" />
             </div>
-            <button type="submit" class="w-14 h-14 bg-accent-emerald text-black rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(0,255,136,0.3)] hover:brightness-110 active:scale-95 transition-all glow-emerald">
+            <button type="submit" class="w-14 h-14 bg-accent-emerald text-black rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(0,255,136,0.3)] hover:brightness-110 active:scale-95 transition-all">
                 <i data-lucide="send" size="24" class="translate-x-0.5"></i>
             </button>
         </form>
@@ -325,232 +320,97 @@ function renderContent() {
   `;
 }
 
-function renderTasksView() {
-    return `
-        <div class="flex-1 p-10 overflow-y-auto">
-            <div class="max-w-4xl mx-auto space-y-10">
-                <div class="flex justify-between items-end">
-                    <div>
-                        <h1 class="text-4xl font-bold text-accent-gold">Academic Tasks</h1>
-                        <p class="text-text-secondary text-sm mt-2">Manage your curriculum and assignments</p>
-                    </div>
-                    <button class="bg-accent-gold text-bg-deep px-6 py-2 rounded-xl font-bold text-sm uppercase tracking-widest">New Assignment</button>
-                </div>
-
-                <div class="grid grid-cols-3 gap-6">
-                    ${['To Do', 'In Progress', 'Done'].map(status => `
-                        <div class="space-y-4">
-                            <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-text-secondary border-b border-panel-green pb-2">${status}</h3>
-                            <div class="space-y-3">
-                                ${status === 'To Do' ? `
-                                    <div class="glass-panel p-4 rounded-xl space-y-2 border-l-4 border-l-red-500 hover:scale-[1.02] transition-transform cursor-pointer">
-                                        <p class="text-xs font-bold">Physics Lab Report: Newton's Laws</p>
-                                        <p class="text-[10px] text-text-secondary">Due: May 15, 2026</p>
-                                        <div class="flex gap-1 mt-2">
-                                            <span class="px-2 py-0.5 rounded bg-panel-green text-[8px] text-accent-gold uppercase font-bold">HIGH PRIORITY</span>
-                                        </div>
-                                    </div>
-                                    <div class="glass-panel p-4 rounded-xl space-y-2 border-l-4 border-l-blue-500 hover:scale-[1.02] transition-transform cursor-pointer">
-                                        <p class="text-xs font-bold">Math Quiz Prep</p>
-                                        <p class="text-[10px] text-text-secondary">Due: May 18, 2026</p>
-                                    </div>
-                                ` : `<div class="p-10 border border-dashed border-panel-green rounded-xl text-center text-[10px] text-text-secondary">Empty</div>`}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderCalendarView() {
-    return `
-        <div class="flex-1 flex flex-col items-center justify-center">
-            <div class="glass-panel p-10 rounded-2xl border-2 border-accent-gold/20 text-center space-y-6">
-                <h2 class="text-3xl font-black text-accent-gold uppercase tracking-[0.3em]">Full Calendar View</h2>
-                <p class="text-text-secondary max-w-md">The master academic calendar is currently being synchronized with the university data centers.</p>
-                <div class="grid grid-cols-7 gap-1 w-full max-w-sm pt-4">
-                    ${Array.from({length: 31}).map((_, i) => `<div class="aspect-square flex items-center justify-center border border-panel-green/30 text-[10px] ${i === 10 ? 'bg-accent-gold text-bg-deep font-bold' : ''}">${i+1}</div>`).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderFileMessage(m) {
-    const ext = m.file_url.split('.').pop().toLowerCase();
-    if (['jpg','jpeg','png','webp','gif'].includes(ext)) {
-        return `<img src="${m.file_url}" class="rounded-lg max-w-full hover:scale-105 transition-transform cursor-pointer" />`;
-    }
-    return `
-        <div class="flex items-center gap-3 bg-black/20 p-2 rounded-lg border border-white/5">
-            <i data-lucide="file-text" class="text-accent-gold"></i>
-            <div class="overflow-hidden">
-                <p class="text-sm font-bold truncate">${m.content || 'File'}</p>
-                <a href="${m.file_url}" download class="text-[10px] text-accent-gold hover:underline">Download File</a>
-            </div>
-        </div>
-    `;
-}
-
-function renderRightPanel() {
-    const roleLabel = state.user?.role === 'ADMIN' ? 'COMMANDER' : 'OPERATIVE';
-
-    return `
-        <div class="p-6 flex flex-col items-center">
-            <div class="w-24 h-24 rounded-2xl bg-panel-green border border-accent-gold/30 flex items-center justify-center text-3xl font-bold text-accent-gold mb-4 relative">
-                ${state.user?.username ? state.user.username[0].toUpperCase() : 'U'}
-                <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-bg-deep border border-panel-green flex items-center justify-center text-[10px]"><i data-lucide="camera" size="12"></i></div>
-            </div>
-            <h2 class="text-xl font-bold text-center">${state.user?.username || 'Unit'}</h2>
-            <div class="mt-2 text-center">
-                <p class="text-accent-gold font-mono text-[11px] tracking-widest uppercase font-bold">${state.user?.role || 'OPERATIVE'}</p>
-                <p class="text-text-secondary font-mono text-[9px] uppercase tracking-tighter mt-1 border-t border-panel-green pt-1 flex justify-between"><span>UID:</span> <span>${state.user?.id.split('-')[0]}...</span></p>
-                <p class="text-text-secondary font-bold text-[9px] uppercase tracking-tighter mt-0.5 flex justify-between"><span>SECTOR:</span> <span>${state.user?.sector || 'N/A'}</span></p>
-            </div>
-            
-            <div class="w-full mt-10 space-y-6">
-                <div class="space-y-2">
-                    <p class="text-[10px] font-bold text-text-secondary uppercase">Quick Access</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button class="utility-btn p-4 bg-panel-green/20 rounded-xl hover:bg-panel-green/40 transition-all border border-panel-green/20 text-center flex flex-col items-center gap-2" data-type="Courses">
-                            <i data-lucide="book" class="text-accent-gold" size="20"></i>
-                            <span class="text-[10px] font-medium">Courses</span>
-                        </button>
-                        <button class="utility-btn p-4 bg-panel-green/20 rounded-xl hover:bg-panel-green/40 transition-all border border-panel-green/20 text-center flex flex-col items-center gap-2" data-type="Grades">
-                            <i data-lucide="award" class="text-accent-gold" size="20"></i>
-                            <span class="text-[10px] font-medium">Grades</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <p class="text-[10px] font-bold text-text-secondary uppercase">Global Intel Feed</p>
-                        <span class="text-[8px] text-accent-gold cursor-pointer hover:underline">View All</span>
-                    </div>
-                    <div class="p-4 glass-panel rounded-xl space-y-2 border border-panel-green/30">
-                        <p class="text-[11px] font-bold leading-tight">Quantum Mechanics 101 lecture uploaded</p>
-                        <p class="text-[9px] text-text-secondary flex items-center gap-1"><i data-lucide="clock" size="10"></i> 2 hours ago</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
 function renderCallOverlay() {
+    const isVideo = state.call.type === 'video';
     return `
-        <div class="fixed inset-0 z-[100] bg-bg-deep/95 backdrop-blur-xl flex flex-col items-center justify-center animate-slide-up">
-            <div class="w-32 h-32 rounded-full border-4 border-accent-gold flex items-center justify-center p-1 mb-8 animate-pulse">
-                <div class="w-full h-full rounded-full bg-panel-green flex items-center justify-center text-4xl font-bold text-accent-gold">
-                    ${state.call.remoteUser?.full_name ? state.call.remoteUser.full_name[0] : 'U'}
+        <div class="fixed inset-0 z-[100] bg-[#060b0d]/95 backdrop-blur-xl flex flex-col items-center justify-center animate-slide-up">
+            ${isVideo ? `
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <video id="remote-video" autoplay playsinline class="w-full h-full object-cover opacity-80"></video>
                 </div>
-            </div>
-            <h2 class="text-3xl font-bold text-accent-gold mb-2">${state.call.type === 'video' ? 'Video' : 'Audio'} Call</h2>
-            <p class="text-text-secondary animate-pulse uppercase tracking-[0.2em] text-xs">Calling ${state.call.remoteUser?.full_name}...</p>
+                <div class="absolute bottom-10 right-10 w-48 h-64 bg-black rounded-2xl overflow-hidden border-2 border-accent-emerald shadow-[0_0_30px_rgba(0,255,136,0.2)] z-10">
+                    <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                </div>
+            ` : `
+                <div class="w-32 h-32 rounded-full border-4 border-accent-emerald flex items-center justify-center p-1 mb-8 animate-pulse relative z-10">
+                    <div class="w-full h-full rounded-full bg-accent-emerald/20 flex items-center justify-center text-4xl font-black text-accent-emerald">
+                        ${state.call.remoteUser?.name ? state.call.remoteUser.name[0].toUpperCase() : 'U'}
+                    </div>
+                </div>
+            `}
             
-            <div class="mt-20 flex gap-10">
-                <button id="end-call" class="w-20 h-20 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all"><i data-lucide="phone-off" size="32"></i></button>
-                <div class="w-20 h-20 rounded-full bg-panel-green text-white flex items-center justify-center shadow-lg"><i data-lucide="mic-off" size="32"></i></div>
+            <h2 class="text-3xl font-black text-white mb-2 relative z-10 drop-shadow-md italic uppercase tracking-wider">${isVideo ? 'Video' : 'Audio'} Call</h2>
+            <p class="text-accent-emerald animate-pulse uppercase tracking-[0.2em] text-xs relative z-10 drop-shadow-md">
+                ${state.remoteStream ? 'Secure Link Established' : `Calling ${state.call.remoteUser?.name || 'Unknown'}...`}
+            </p>
+            
+            <audio id="remote-audio" autoplay></audio>
+
+            <div class="mt-20 flex gap-10 relative z-10">
+                <button id="end-call" class="w-20 h-20 rounded-full bg-red-500/80 text-white flex items-center justify-center shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 hover:scale-110 active:scale-95 transition-all backdrop-blur-md">
+                    <i data-lucide="phone-off" size="32"></i>
+                </button>
             </div>
         </div>
     `;
 }
 
 // --- Logic ---
-async function attachAuthEvents() {
-    const attachLogin = () => {
-      document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+function attachAuthEvents() {
+    document.getElementById('show-register')?.addEventListener('click', () => {
+        state.authMode = 'register';
+        render();
+    });
+
+    document.getElementById('show-login')?.addEventListener('click', () => {
+        state.authMode = 'login';
+        render();
+    });
+
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = e.target.login.value;
         const password = e.target.password.value;
         try {
-          const data = await API.post('/api/auth/login', { username, password });
-          state.token = data.access_token;
-          state.user = data.user;
-          localStorage.setItem('aura_token', data.access_token);
-          localStorage.setItem('aura_user', JSON.stringify(data.user));
-          initApp();
+            const data = await API.post('/api/auth/login', { username, password });
+            state.token = data.access_token;
+            state.user = data.user;
+            localStorage.setItem('aura_token', data.access_token);
+            localStorage.setItem('aura_user', JSON.stringify(data.user));
+            initApp();
         } catch (err) { alert(err.message); }
-      });
+    });
 
-      document.getElementById('show-register')?.addEventListener('click', () => {
-          const container = document.getElementById('auth-forms');
-          if (container) {
-              container.innerHTML = renderRegister();
-              attachRegister();
-          }
-      });
-    };
+    document.getElementById('role-select')?.addEventListener('change', (e) => {
+        const input = document.getElementById('role-detail-input');
+        if (input) {
+            input.placeholder = e.target.value === 'ADMIN' ? 'Command (e.g. HQ)' : 'Sector (e.g. North)';
+        }
+    });
 
-    const attachRegister = () => {
-        document.getElementById('role-select')?.addEventListener('change', (e) => {
-            const input = document.getElementById('role-detail-input');
-            if (input) {
-                input.placeholder = e.target.value === 'ADMIN' ? 'Command (e.g. HQ)' : 'Sector (e.g. North)';
+    document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const body = Object.fromEntries(formData.entries());
+        
+        try {
+            const payload = {
+                username: body.login,
+                password: body.password,
+                role: body.role === 'ADMIN' ? 'Commander' : 'Operative',
+                sector: body.group_dept
+            };
+            const data = await API.post('/api/auth/register', payload);
+            if (data) {
+                alert('Profile Initialized. Please synchronize login.');
+                state.authMode = 'login';
+                render();
             }
-        });
-
-        document.getElementById('register-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const body = Object.fromEntries(formData.entries());
-            
-            try {
-                const payload = {
-                    username: body.login,
-                    password: body.password,
-                    role: body.role === 'ADMIN' ? 'Commander' : 'Operative',
-                    sector: body.group_dept
-                };
-                const data = await API.post('/api/auth/register', payload);
-                if (data) {
-                    alert('Profile Initialized. Please synchronize login.');
-                    const container = document.getElementById('auth-forms');
-                    if (container) {
-                        container.innerHTML = `
-                            <form id="login-form" class="space-y-4">
-                              <input type="text" name="login" value="${body.login}" placeholder="Email / Login" class="w-full bg-bg-deep border border-panel-green p-4 rounded-xl text-text-primary focus:border-accent-gold outline-none" required />
-                              <input type="password" name="password" placeholder="Password" class="w-full bg-bg-deep border border-panel-green p-4 rounded-xl text-text-primary focus:border-accent-gold outline-none" required />
-                              <button type="submit" class="w-full bg-accent-gold text-bg-deep font-bold p-4 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest">Enter Platform</button>
-                            </form>
-                            <div class="mt-6 text-center">
-                                <button id="show-register" class="text-text-secondary text-sm hover:text-accent-gold transition-colors">New student? Access credentials here</button>
-                            </div>
-                        `;
-                        attachLogin();
-                    }
-                } else {
-                    alert(data.error);
-                }
-            } catch (err) { alert('Registration failed'); }
-        });
-
-        document.getElementById('show-login')?.addEventListener('click', () => {
-            const container = document.getElementById('auth-forms');
-            if (container) {
-                container.innerHTML = `
-                    <form id="login-form" class="space-y-4">
-                      <input type="text" name="login" placeholder="Email / Login" class="w-full bg-bg-deep border border-panel-green p-4 rounded-xl text-text-primary focus:border-accent-gold outline-none" required />
-                      <input type="password" name="password" placeholder="Password" class="w-full bg-bg-deep border border-panel-green p-4 rounded-xl text-text-primary focus:border-accent-gold outline-none" required />
-                      <button type="submit" class="w-full bg-accent-gold text-bg-deep font-bold p-4 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest">Enter Platform</button>
-                    </form>
-                    <div class="mt-6 text-center">
-                        <button id="show-register" class="text-text-secondary text-sm hover:text-accent-gold transition-colors">New student? Access credentials here</button>
-                    </div>
-                `;
-                attachLogin();
-            }
-        });
-    };
-
-    attachLogin();
+        } catch (err) { alert('Registration failed: ' + err.message); }
+    });
 }
 
 function attachMainEvents() {
-  // Sidebar navigation
   document.querySelectorAll('.sidebar-icon[data-view]').forEach(icon => {
     icon.onclick = () => {
       state.activeView = icon.dataset.view;
@@ -559,20 +419,14 @@ function attachMainEvents() {
     };
   });
 
-  document.getElementById('logout-btn').onclick = () => {
-    localStorage.removeItem('aura_token');
-    state.token = null;
-    state.user = null;
-    render();
-  };
+  document.getElementById('logout-btn').onclick = logout;
 
-  // Chat selection (p2p, groups, subgroups)
   document.querySelectorAll('[data-target-id]').forEach(el => {
     el.onclick = async () => {
         try {
             const type = el.dataset.targetType;
             const id = el.dataset.targetId;
-            const nameEl = el.querySelector('.target-name') || el.querySelector('p, span');
+            const nameEl = el.querySelector('.target-name') || el.querySelector('span');
             const name = nameEl ? nameEl.textContent : 'Unknown';
             
             state.selectedTarget = { type, id, name };
@@ -598,10 +452,14 @@ function attachMainEvents() {
   });
 
   document.getElementById('btn-add-member')?.addEventListener('click', async () => {
-    const userId = prompt('Enter User ID to add:');
+    const userId = prompt('Enter User ID to add (UUID):');
     if (userId && state.selectedTarget) {
-        await API.post(`/api/groups/${state.selectedTarget.id}/members`, { user_id: userId });
-        alert('Unit synchronized to tactical channel.');
+        try {
+            await API.post(`/api/groups/${state.selectedTarget.id}/members`, { user_id: userId });
+            alert('Unit synchronized to tactical channel.');
+        } catch(e) {
+            alert('Failed to add member. Ensure ID is correct.');
+        }
     }
   });
 
@@ -611,43 +469,10 @@ function attachMainEvents() {
       sendMessage();
   });
 
-  document.getElementById('msg-input')?.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendMessage();
-      }
-  });
-
-  // File Upload
-  document.getElementById('file-input')?.addEventListener('change', async e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${state.token}` },
-          body: formData
-      });
-      const data = await res.json();
-      sendMessage(data.url, file.name);
-  });
-
-  // Call events
+  // WebRTC Call actions
   document.getElementById('btn-audio-call')?.addEventListener('click', () => startCall('audio'));
   document.getElementById('btn-video-call')?.addEventListener('click', () => startCall('video'));
-  document.getElementById('end-call')?.addEventListener('click', () => {
-      state.call.active = false;
-      render();
-  });
-
-  document.querySelectorAll('.utility-btn').forEach(btn => {
-      btn.onclick = () => {
-          const type = btn.dataset.type;
-          alert(`Accessing ${type} database... Permission Denied: Higher clearance required.`);
-      };
-  });
+  document.getElementById('end-call')?.addEventListener('click', endCall);
 }
 
 window.createSubgroup = async (groupId) => {
@@ -677,41 +502,6 @@ function sendMessage() {
     }
 }
 
-function startCall(type) {
-    state.call = { active: true, type, remoteUser: state.selectedTarget };
-    render();
-    state.ws.send(JSON.stringify({
-        type: 'call_signal',
-        targetId: state.selectedTarget.id,
-        signalType: 'init',
-        callType: type,
-        senderId: state.user.id,
-        senderName: state.user.full_name
-    }));
-}
-
-async function loadSchedule() {
-    try {
-        const data = await API.get('/api/schedule');
-        const container = document.getElementById('schedule-list');
-        if (container) {
-            container.innerHTML = data.map(s => `
-                <div class="p-3 bg-bg-deep/40 rounded-lg border border-panel-green/20 flex flex-col gap-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-accent-gold">${s.time}</span>
-                        <span class="text-[9px] px-1 bg-accent-gold/10 text-accent-gold rounded border border-accent-gold/20 font-bold uppercase">${s.room}</span>
-                    </div>
-                    <p class="text-xs font-semibold truncate">${s.subject}</p>
-                    <p class="text-[9px] text-text-secondary truncate italic">${s.teacher}</p>
-                </div>
-            `).join('');
-        }
-    } catch (err) {
-        const container = document.getElementById('schedule-list');
-        if (container) container.innerHTML = '<p class="text-[10px] text-red-500">Sync Error</p>';
-    }
-}
-
 async function initApp() {
     try {
         state.chats = await API.get('/api/chats');
@@ -734,17 +524,20 @@ function initWebSocket() {
     };
 
     state.ws.onclose = () => {
-        console.log("WS closed. Reconnecting...");
+        console.log("WS closed. Reconnecting in 3s...");
         setTimeout(initWebSocket, 3000);
     };
 }
 
 function handleSocketMessage(data) {
     if (data.type === 'message') {
-        const isCurrent = 
-            (state.selectedTarget?.type === 'p2p' && (data.senderId === state.selectedTarget.id || data.senderId === state.user.id)) ||
-            (state.selectedTarget?.type === 'group' && data.targetId === state.selectedTarget.id) ||
-            (state.selectedTarget?.type === 'subgroup' && data.targetId === state.selectedTarget.id);
+        let isCurrent = false;
+        
+        if (state.selectedTarget?.type === 'p2p') {
+            isCurrent = data.senderId === state.selectedTarget.id || data.senderId === state.user.id;
+        } else if (state.selectedTarget?.type === 'group' || state.selectedTarget?.type === 'subgroup') {
+            isCurrent = data.targetId === state.selectedTarget.id || data.groupId === state.selectedTarget.id;
+        }
         
         if (isCurrent) {
             state.messages.push({
@@ -758,9 +551,17 @@ function handleSocketMessage(data) {
             const container = document.getElementById('messages-container');
             if (container) container.scrollTop = container.scrollHeight;
         }
-    } else if (['call_offer', 'call_answer', 'ice_candidate'].includes(data.type)) {
+    } else if (['call_signal', 'call_offer', 'call_answer', 'ice_candidate'].includes(data.type)) {
         handleCallSignal(data);
     }
+}
+
+// --- WebRTC Logic ---
+function attachMediaStream(elementId, stream) {
+    setTimeout(() => {
+        const el = document.getElementById(elementId);
+        if (el) el.srcObject = stream;
+    }, 100);
 }
 
 async function startCall(type = 'audio') {
@@ -768,37 +569,77 @@ async function startCall(type = 'audio') {
     state.call = { active: true, type, remoteUser: state.selectedTarget, initiator: true };
     render();
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-    state.localStream = stream;
-    
-    state.peer = new Peer({ initiator: true, trickle: true, stream });
-    state.peer.on('signal', signal => {
-        state.ws.send(JSON.stringify({ type: 'call_offer', targetId: state.selectedTarget.id, signal, callType: type }));
-    });
-    state.peer.on('stream', stream => { state.remoteStream = stream; console.log("Remote stream received"); });
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+        state.localStream = stream;
+        attachMediaStream('local-video', stream);
+        
+        state.peer = new Peer({ initiator: true, trickle: true, stream });
+        
+        state.peer.on('signal', signal => {
+            state.ws.send(JSON.stringify({ type: 'call_offer', targetId: state.selectedTarget.id, signal, callType: type }));
+        });
+        
+        state.peer.on('stream', remoteStream => { 
+            state.remoteStream = remoteStream; 
+            render();
+            attachMediaStream(type === 'video' ? 'remote-video' : 'remote-audio', remoteStream);
+        });
+    } catch (err) {
+        console.error("Media error", err);
+        alert("Camera/Microphone access denied. HTTPS required.");
+        endCall();
+    }
 }
 
 function handleCallSignal(data) {
     if (data.type === 'call_offer') {
-        if (confirm(`Incoming call from ${data.senderName}. Accept?`)) {
+        if (confirm(`Incoming ${data.callType} call from ${data.senderName}. Accept?`)) {
             state.call = { active: true, type: data.callType, remoteUser: { id: data.senderId, name: data.senderName }, initiator: false };
             render();
+            
             navigator.mediaDevices.getUserMedia({ audio: true, video: data.callType === 'video' }).then(stream => {
                 state.localStream = stream;
+                attachMediaStream('local-video', stream);
+                
                 state.peer = new Peer({ initiator: false, trickle: true, stream });
+                
                 state.peer.on('signal', signal => {
                     state.ws.send(JSON.stringify({ type: 'call_answer', targetId: data.senderId, signal }));
                 });
-                state.peer.on('stream', stream => { state.remoteStream = stream; });
+                
+                state.peer.on('stream', remoteStream => { 
+                    state.remoteStream = remoteStream;
+                    render();
+                    attachMediaStream(data.callType === 'video' ? 'remote-video' : 'remote-audio', remoteStream);
+                });
+                
                 state.peer.signal(data.signal);
+            }).catch(err => {
+                alert("Could not access media devices.");
+                endCall();
             });
         }
-    } else if (state.peer) {
+    } else if (state.peer && data.signal) {
         state.peer.signal(data.signal);
     }
 }
 
-// Start
+function endCall() {
+    if (state.localStream) {
+        state.localStream.getTracks().forEach(track => track.stop());
+    }
+    if (state.peer) {
+        state.peer.destroy();
+    }
+    state.call = { active: false, type: null, remoteUser: null, initiator: false };
+    state.localStream = null;
+    state.remoteStream = null;
+    state.peer = null;
+    render();
+}
+
+// Start Application
 document.addEventListener('DOMContentLoaded', () => {
     if (state.token) initApp();
     else render();
