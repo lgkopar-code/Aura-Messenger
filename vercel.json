@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR_BACKEND_URL.com/api/:path*"
+      "destination": "https://aura-api-tnuw.onrender.com/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "https://YOUR_BACKEND_URL.com/ws/:path*"
+      "destination": "https://aura-api-tnuw.onrender.com/ws/:path*"
     }
   ]
 }
