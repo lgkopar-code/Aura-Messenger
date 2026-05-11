@@ -1,0 +1,6 @@
+{
+  "name": "Aura Academic Messenger",
+  "description": "A premium academic corporate messenger with Microsoft Teams structure, featuring real-time chats, teams, channels, integrated schedules, tasks, and WebRTC calls.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": []
+}

@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-deep: #060b0d;
+  --color-panel-bg: #0d161a;
+  --color-accent-emerald: #00ff88;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #94a3b8;
+  --color-border-green: rgba(0, 255, 136, 0.1);
+}
+
+body {
+  margin: 0;
+  @apply bg-bg-deep text-text-primary overflow-hidden font-sans;
+  background-image: radial-gradient(circle at 50% 120%, #004d2e 0%, #060b0d 50%);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-accent-emerald/20 rounded-full hover:bg-accent-emerald/40 transition-colors;
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+  @apply bg-panel-bg/60 backdrop-blur-2xl border border-white/5;
+}
+
+.sidebar-icon {
+  @apply w-[68px] h-[68px] flex flex-col items-center justify-center cursor-pointer transition-all gap-1 text-text-secondary/60 hover:text-accent-emerald hover:bg-accent-emerald/5;
+}
+
+.sidebar-icon i {
+  @apply transition-transform;
+}
+
+.sidebar-icon:hover i {
+  @apply scale-110;
+}
+
+.sidebar-icon.active {
+  @apply text-accent-emerald bg-accent-emerald/10 border-l-4 border-accent-emerald;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.sidebar-icon span {
+  @apply text-[10px] font-medium;
+}
+
+/* Chat Bubbles */
+.chat-bubble {
+  @apply p-3.5 px-5 rounded-2xl max-w-[75%] relative text-sm leading-relaxed shadow-lg;
+}
+
+.chat-bubble-me {
+  @apply bg-[#122b22] text-[#00ff88] self-end rounded-tr-none border border-accent-emerald/20;
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.05);
+}
+
+.chat-bubble-them {
+  @apply bg-[#1b2126] text-white self-start rounded-tl-none border border-white/5;
+}
+
+/* Status Dot */
+.status-dot {
+  @apply w-2.5 h-2.5 rounded-full border-2 border-bg-deep;
+}
+.status-online {
+  @apply bg-accent-emerald shadow-[0_0_8px_#00ff88];
+}
+
+/* Input Styles */
+.chat-input-area {
+  @apply bg-[#0f171c]/80 backdrop-blur-md border border-white/5 rounded-2xl p-2 px-4 flex items-center gap-3 transition-all focus-within:border-accent-emerald/30 focus-within:shadow-[0_0_20px_rgba(0,255,136,0.05)];
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(0, 255, 136, 0.5); }
+  100% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.2); }
+}
+
+.glow-emerald {
+  animation: pulse-glow 2s infinite;
+}
