@@ -1,15 +1,34 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase
+import os
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "sqlite+aiosqlite:///./messenger.db"
+# Получаем URL из переменной окружения DATABASE_URL (ее установит Render)
+# Если переменной нет, используем локальный SQLite для тестов
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_async_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if DATABASE_URL:
+    # Render дает URL в формате postgres://, но SQLAlchemy (asyncpg) требует postgresql+asyncpg://
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+else:
+    # Фоллбек на локальный SQLite, если DATABASE_URL не задан
+    DATABASE_URL = "sqlite+aiosqlite:///./messenger.db"
 
-SessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+# Создаем движок
+engine = create_async_engine(
+    DATABASE_URL,
+    # Параметры для PostgreSQL (игнорируются для SQLite)
+    pool_pre_ping=True
+)
 
-class Base(DeclarativeBase):
-    pass
+AsyncSessionLocal = sessionmaker(
+    bind=engine, 
+    class_=AsyncSession, 
+    expire_on_commit=False
+)
+
+Base = declarative_base()
 
 async def get_db():
-    async with SessionLocal() as session:
+    async with AsyncSessionLocal() as session:
         yield session
