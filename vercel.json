@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://aura-api-tnuw.onrender.com/api/:path*"
+      "destination": "http://91.239.207.231:8001/api/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "https://aura-api-tnuw.onrender.com/ws/:path*"
+      "destination": "http://91.239.207.231:8001/ws/:path*"
     }
   ]
 }
